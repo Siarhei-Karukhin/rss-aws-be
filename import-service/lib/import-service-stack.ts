@@ -5,6 +5,7 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3notification from 'aws-cdk-lib/aws-s3-notifications';
+import 'dotenv/config';
 
 export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -36,20 +37,21 @@ export class ImportServiceStack extends cdk.Stack {
       handler: 'importFileParser.handler',
       environment: {
         BUCKET_NAME: bucket.bucketName,
+        SQS_QUEUE_URL: process.env.SQS_QUEUE_URL!,
       },
     });
 
     const importProductsFilePolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: ['s3:PutObject'],
-      resources: [bucket.bucketArn + '/*'],
+      resources: [`${bucket.bucketArn}/*`],
     });
     importProductsFileLambda.addToRolePolicy(importProductsFilePolicy);
 
     const importFileParserPolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
-      actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
-      resources: [`${bucket.bucketArn}/*`],
+      actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject', 'sqs:SendMessage'],
+      resources: [`${bucket.bucketArn}/*`, process.env.SQS_QUEUE_ARN!],
     });
     importFileParserLambda.addToRolePolicy(importFileParserPolicy);
 

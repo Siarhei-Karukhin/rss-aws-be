@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class RssAwsDeveloperBeStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -69,6 +70,28 @@ export class RssAwsDeveloperBeStack extends cdk.Stack {
 
     productsTable.grantReadWriteData(fillTablesLambda);
     stocksTable.grantReadWriteData(fillTablesLambda);
+
+    const catalogBatchProcessLambda = new lambda.Function(this, 'CatalogBatchProcessFunction', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      code: lambda.Code.fromAsset('lambda'),
+      handler: 'catalogBatchProcess.handler',
+      environment: {
+        PRODUCTS_TABLE: productsTable.tableName,
+        STOCKS_TABLE: stocksTable.tableName,
+      }
+    });
+
+    productsTable.grantReadWriteData(catalogBatchProcessLambda);
+    stocksTable.grantReadWriteData(catalogBatchProcessLambda);
+
+    const catalogItemsQueue = new sqs.Queue(this, 'CatalogItemsQueue');
+
+    catalogItemsQueue.grantConsumeMessages(catalogBatchProcessLambda);
+
+    catalogBatchProcessLambda.addEventSourceMapping('snsTopicBatchProcessing',{
+      eventSourceArn: catalogItemsQueue.queueArn,
+      batchSize: 5
+    });
 
     const api = new apigateway.RestApi(this, 'ProductsApi');
 

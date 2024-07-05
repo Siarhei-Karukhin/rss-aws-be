@@ -1,4 +1,5 @@
 import { S3Client, GetObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { PassThrough, Readable } from 'stream';
 import csv from 'csv-parser';
 
@@ -8,6 +9,7 @@ const headers = {
 };
 
 const s3Client = new S3Client({});
+const sqsClient = new SQSClient({});
 
 export const handler = async (event: any) => {
   console.log('event: ', event);
@@ -29,10 +31,22 @@ export const handler = async (event: any) => {
       }
 
       await new Promise((resolve, reject) => {
-        data
-          .pipe(new PassThrough())
-          .pipe(csv())
-          .on('data', console.log)
+        const stream = data.pipe(new PassThrough()).pipe(csv());
+
+        stream
+          .on('data', async (data) => {
+            stream.pause();
+            try {
+              await sqsClient.send(new SendMessageCommand({
+                QueueUrl: process.env.SQS_QUEUE_URL,
+                MessageBody: JSON.stringify(data)
+              }));
+              console.log('Sent to SQS ✔');
+            } catch (error) {
+              console.error('Failed to send to SQS', error);
+            }
+            stream.resume();
+          })
           .on('error', (error: any) => reject(error))
           .on('end', async () => {
             const copyObjectCommandParams = {

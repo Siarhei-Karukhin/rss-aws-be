@@ -3,6 +3,11 @@ import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynam
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { v4 as uuidv4 } from 'uuid';
 
+export enum Cost {
+  Green = "GREEN",
+  Red = "RED",
+}
+
 const isValidBody = (body: any) =>
   Boolean(body?.title) &&
   Boolean(body?.description) &&
@@ -59,18 +64,25 @@ export const handler = async (event: any) => {
           }
         ]
       }));
-    }
 
-    try {
-      const snsMessage = 'Batch of products has been successfully saved to the database!';    
-      await snsClient.send(new PublishCommand({
-        TopicArn: process.env.SNS_TOPIC_ARN,
-        Message: snsMessage,
-      }));
-  
-      console.log(snsMessage);
-    } catch (error) {
-      console.log('Failed to send in SNS', error);
+      try {
+        const snsMessage =
+          `Product with cost === ${body?.price} has been successfully saved to the database!`;    
+        await snsClient.send(new PublishCommand({
+          TopicArn: process.env.SNS_TOPIC_ARN,
+          Message: snsMessage,
+          MessageAttributes: {
+            cost: {
+              DataType: 'String',
+              StringValue: Number(body?.price) < 10 ? Cost.Green : Cost.Red,
+            },
+          },
+        }));
+    
+        console.log(snsMessage);
+      } catch (error) {
+        console.log('Failed to send in SNS', error);
+      }
     }
     
     console.log('The data from the .csv file is written to the database');

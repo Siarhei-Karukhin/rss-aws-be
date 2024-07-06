@@ -8,6 +8,8 @@ import * as sns from 'aws-cdk-lib/aws-sns';
 import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
 import 'dotenv/config';
 
+import { Cost } from '../lambda/catalogBatchProcess';
+
 export class RssAwsDeveloperBeStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -25,7 +27,26 @@ export class RssAwsDeveloperBeStack extends cdk.Stack {
     const createProductTopic = new sns.Topic(this, 'CreateProductTopic', {
       displayName: 'Create product topic',
     });
-    createProductTopic.addSubscription(new subs.EmailSubscription(process.env.PRODUCT_TOPIC_EMAIL_1!));
+    
+    createProductTopic.addSubscription(
+      new subs.EmailSubscription(process.env.PRODUCT_TOPIC_EMAIL_1!, {
+        filterPolicy: {
+          cost: sns.SubscriptionFilter.stringFilter({
+            allowlist: [Cost.Green],
+          }),
+        },
+      })
+    );
+    
+    createProductTopic.addSubscription(
+      new subs.EmailSubscription(process.env.PRODUCT_TOPIC_EMAIL_2!, {
+        filterPolicy: {
+          cost: sns.SubscriptionFilter.stringFilter({
+            allowlist: [Cost.Red],
+          }),
+        },
+      })
+    );
     
     const getProductsListLambda = new lambda.Function(this, 'GetProductsListFunction', {
       runtime: lambda.Runtime.NODEJS_20_X,

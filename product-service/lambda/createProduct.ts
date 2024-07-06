@@ -2,7 +2,7 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuidv4 } from 'uuid';
 
-export const isValidBody = (body: any) =>
+const isValidBody = (body: any) =>
   typeof body?.title === 'string' &&
   typeof body?.description === 'string' &&
   typeof body?.price === 'number' &&

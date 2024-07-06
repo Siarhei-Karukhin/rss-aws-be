@@ -4,6 +4,9 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
+import 'dotenv/config';
 
 export class RssAwsDeveloperBeStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -19,6 +22,11 @@ export class RssAwsDeveloperBeStack extends cdk.Stack {
       tableName: "Stocks",
     });
 
+    const createProductTopic = new sns.Topic(this, 'CreateProductTopic', {
+      displayName: 'Create product topic',
+    });
+    createProductTopic.addSubscription(new subs.EmailSubscription(process.env.PRODUCT_TOPIC_EMAIL_1!));
+    
     const getProductsListLambda = new lambda.Function(this, 'GetProductsListFunction', {
       runtime: lambda.Runtime.NODEJS_20_X,
       code: lambda.Code.fromAsset('lambda'),
@@ -78,11 +86,14 @@ export class RssAwsDeveloperBeStack extends cdk.Stack {
       environment: {
         PRODUCTS_TABLE: productsTable.tableName,
         STOCKS_TABLE: stocksTable.tableName,
+        SNS_TOPIC_ARN: createProductTopic.topicArn,
       }
     });
 
     productsTable.grantReadWriteData(catalogBatchProcessLambda);
     stocksTable.grantReadWriteData(catalogBatchProcessLambda);
+    
+    createProductTopic.grantPublish(catalogBatchProcessLambda);
 
     const catalogItemsQueue = new sqs.Queue(this, 'CatalogItemsQueue');
 

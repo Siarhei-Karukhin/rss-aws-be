@@ -22,6 +22,35 @@ export class ImportServiceStack extends cdk.Stack {
       ],
     });
 
+    const basicAuthorizerLambda = lambda.Function.fromFunctionArn(
+      this,
+      'BasicAuthorizerFunction',
+      process.env.BASIC_AUTHORIZER_ARN!,
+    );
+
+    const authRole = new iam.Role(this, 'authorizer-role', {
+      roleName: 'authorizer-role',
+      assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
+      inlinePolicies: {
+        allowLambdaInvocation: iam.PolicyDocument.fromJson({
+          Version: '2012-10-17',
+          Statement: [
+            {
+              Effect: 'Allow',
+              Action: ['lambda:InvokeFunction', 'lambda:InvokeAsync'],
+              Resource: process.env.BASIC_AUTHORIZER_ARN!,
+            },
+          ],
+        }),
+      },
+    });
+
+    const authorizer = new apigateway.TokenAuthorizer(this, 'basicAuthorizer', {
+      handler: basicAuthorizerLambda,
+      resultsCacheTtl: cdk.Duration.seconds(0),
+      assumeRole: authRole,
+    });
+
     const importProductsFileLambda = new lambda.Function(this, 'ImportProductsFileFunction', {
       runtime: lambda.Runtime.NODEJS_20_X,
       code: new lambda.AssetCode('lambda'),
@@ -55,10 +84,21 @@ export class ImportServiceStack extends cdk.Stack {
     });
     importFileParserLambda.addToRolePolicy(importFileParserPolicy);
 
-    const api = new apigateway.RestApi(this, 'ImportServiceAPI');
+    const api = new apigateway.RestApi(this, 'ImportServiceAPI', {
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+      },
+      cloudWatchRole: true,
+    });
 
     const importResource = api.root.addResource('import');
-    importResource.addMethod('GET', new apigateway.LambdaIntegration(importProductsFileLambda));
+    importResource.addMethod('GET', new apigateway.LambdaIntegration(importProductsFileLambda), {
+      authorizer,
+      requestParameters: {
+        'method.request.header.Authorization': true,
+      },
+    });
 
     bucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,

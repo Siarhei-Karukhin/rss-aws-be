@@ -7,14 +7,12 @@ export class AuthorizationServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const github = 'Siarhei-Karukhin';
-    
     new lambda.Function(this, 'BasicAuthorizerFunction', {
       runtime: lambda.Runtime.NODEJS_20_X,
       code: new lambda.AssetCode('lambda'),
       handler: 'basicAuthorizer.handler',
       environment: {
-        [github]: process.env[github]!,
+        zxc: process.env.zxc!,
       },
     });
   }

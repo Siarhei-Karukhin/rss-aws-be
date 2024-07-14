@@ -7,6 +7,13 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3notification from 'aws-cdk-lib/aws-s3-notifications';
 import 'dotenv/config';
 
+const responseHeaders = {
+  "Access-Control-Allow-Origin": "'*'",
+  "Access-Control-Allow-Headers": 
+  "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+  "Access-Control-Allow-Methods": "'OPTIONS,GET,PUT'"
+}
+
 export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -88,8 +95,22 @@ export class ImportServiceStack extends cdk.Stack {
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: apigateway.Cors.DEFAULT_HEADERS,
+        allowCredentials: true,
       },
       cloudWatchRole: true,
+    });
+
+    api.addGatewayResponse('GatewayResponseUnauthorized', {
+      type: cdk.aws_apigateway.ResponseType.UNAUTHORIZED,
+      responseHeaders,
+      statusCode: '401',
+    });
+
+    api.addGatewayResponse('GatewayResponseAccessDenied', {
+      type: cdk.aws_apigateway.ResponseType.ACCESS_DENIED,
+      responseHeaders,
+      statusCode: '403',
     });
 
     const importResource = api.root.addResource('import');

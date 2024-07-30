@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import axios from 'axios';
 
 const fastify = Fastify({ logger: true });
 
@@ -11,6 +12,23 @@ fastify.route({
     console.log('originalUrl: ', originalUrl);
     console.log('method: ', method);
     console.log('body: ', body ?? null);
+
+    axios({
+      url: 'https://api.example.com/123',
+      method: 'get',
+      params: {
+        userId: 123
+      },
+      headers: {
+        'Authorization': 'Bearer 123'
+      },
+      timeout: 5000,
+      responseType: 'json'
+    }).then(response => {
+      console.log(response.data);
+    }).catch(error => {
+      console.error('Error during API request', error);
+    });
     
     reply.send({ originalUrl, method, body: body ?? null });
   }

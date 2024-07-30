@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import axios from 'axios';
+import 'dotenv/config';
 
 const fastify = Fastify({ logger: true });
 
@@ -12,6 +13,7 @@ fastify.route({
     console.log('originalUrl: ', originalUrl);
     console.log('method: ', method);
     console.log('body: ', body ?? null);
+    console.log('process.env.zxc', process.env.zxc);
 
     axios({
       url: 'https://api.example.com/123',

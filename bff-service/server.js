@@ -41,9 +41,14 @@ fastify.route({
       responseType: 'json'
     }).then((response) => {
       const { status, data } = response;
-      reply.send({ status, data });
+      reply.status(status).send(data);
     }).catch((error) => {
-      reply.send({ error });
+      if (error?.response) {
+        const { status, data } = error.response;
+        reply.status(status).send(data);
+      } else {
+        reply.status(500).send('Something went wrong :{ ');
+      }
     });
 
   }

@@ -8,31 +8,44 @@ fastify.route({
   method: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'],
   url: '/*',
   handler: (request, reply) => {
-    const { originalUrl, method, body } = request;
+    const { originalUrl, method, body: data, headers } = request;
+    console.log('#originalUrl: ', originalUrl);
+    console.log('#method: ', method);
+    console.log('#data: ', data);
+    console.log('#headers: ', headers);
 
-    console.log('originalUrl: ', originalUrl);
-    console.log('method: ', method);
-    console.log('body: ', body ?? null);
-    console.log('process.env.zxc', process.env.zxc);
+    if (originalUrl === '/favicon.ico') {
+      return reply.status(204).send();
+    }
+
+    const [path] = originalUrl.split('?');
+    const serviceKey = path.split('/')[1];
+    console.log('#path: ', path);
+    console.log('#serviceKey: ', serviceKey);
+
+    if (serviceKey !== 'cart-api' && serviceKey !== 'product-api') {
+      return reply.status(502).send({ error: 'Cannot process request' });
+    }
+
+    const apiHost = process.env[serviceKey.replace('-', '')];
+    const apiPath = originalUrl.replace(`/${serviceKey}`, '');
+    const url = `${apiHost}${apiPath}`;
+    console.log('#url: ', url);
 
     axios({
-      url: 'https://api.example.com/123',
-      method: 'get',
-      params: {
-        userId: 123
-      },
-      headers: {
-        'Authorization': 'Bearer 123'
-      },
+      url,
+      data,
+      method,
+      headers: { 'Authorization': headers.authorization },
       timeout: 5000,
       responseType: 'json'
-    }).then(response => {
-      console.log(response.data);
-    }).catch(error => {
-      console.error('Error during API request', error);
+    }).then((response) => {
+      const { status, data } = response;
+      reply.send({ status, data });
+    }).catch((error) => {
+      reply.send({ error });
     });
-    
-    reply.send({ originalUrl, method, body: body ?? null });
+
   }
 });
 

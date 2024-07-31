@@ -1,11 +1,13 @@
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import axios from 'axios';
 import 'dotenv/config';
 
 const fastify = Fastify({ logger: true });
+await fastify.register(cors, { origin: '*' });
 
 fastify.route({
-  method: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'],
+  method: ['GET', 'PUT', 'POST', 'DELETE', 'PATCH'],
   url: '/*',
   handler: (request, reply) => {
     const { originalUrl, method, body: data, headers } = request;
@@ -56,7 +58,7 @@ fastify.route({
 
 const start = async () => {
   try {
-    await fastify.listen({ port: 3000, host: '0.0.0.0' });
+    await fastify.listen({ port: 3125, host: '0.0.0.0' });
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

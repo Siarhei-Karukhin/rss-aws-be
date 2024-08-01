@@ -8,7 +8,7 @@ const fastify = Fastify({ logger: true });
 
 await fastify.register(cors, { origin: '*' });
 
-fastify.decorate('cache', new NodeCache({ stdTTL: 60 * 2, checkperiod: 60 * 2 }));
+fastify.decorate('cache', new NodeCache({ stdTTL: 10, checkperiod: 10 }));
 
 fastify.route({
   method: ['GET', 'PUT', 'POST', 'DELETE', 'PATCH'],
@@ -26,18 +26,18 @@ fastify.route({
 
     const isGetProductsListRoute = originalUrl === '/product-api/products';
     const productsListCacheKey = 'productsList';
-    const cachedProductsList = isGetProductsListRoute && fastify.cache.get(productsListCacheKey);
+    const cachedProductsList = fastify.cache.get(productsListCacheKey);
     console.log('#isGetProductsListRoute: ', isGetProductsListRoute);
     console.log('#cachedProductsList: ', cachedProductsList);
 
-    if (cachedProductsList) {
+    if (isGetProductsListRoute && cachedProductsList) {
       const { status, data } = cachedProductsList;
 
       return reply.status(status).send(data);
     }
 
     const cacheProductsList = (status, data) => {
-      if (!cachedProductsList) {
+      if (isGetProductsListRoute && !cachedProductsList) {
         fastify.cache.set(productsListCacheKey, { status, data });
       }
     };

@@ -8,7 +8,7 @@ const fastify = Fastify({ logger: true });
 
 await fastify.register(cors, { origin: '*' });
 
-fastify.decorate('cache', new NodeCache({ stdTTL: 10, checkperiod: 10 }));
+fastify.decorate('cache', new NodeCache({ stdTTL: 60 * 2, checkperiod: 60 * 2 }));
 
 fastify.route({
   method: ['GET', 'PUT', 'POST', 'DELETE', 'PATCH'],
